@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<style> /* set the CSS */
+body { font: 12px Arial;}
+
+path {
+    stroke: steelblue;
+    stroke-width: 2;
+    fill: none;
+}
+
+.axis path,
+.axis line {
+    fill: none;
+    stroke: grey;
+    stroke-width: 1;
+    shape-rendering: crispEdges;
+}
+</style>
+<body>
+
+<div id="option">
+    <input name="updateButton" type="button" value="MDS - Euclidean" onclick="updateData()" />
+    <input name="updateButton" type="button" value="MDS - Correlation" onclick="loadBack()" />
+</div>
+<div id="wait" style="display:none;width:69px;height:89px;border:1px solid black;position:absolute;top:50%;left:50%;padding:2px;"><img src="{{ url_for('static', filename='ajax-loader.gif') }}" width="64" height="64" /><br>Loading..</div>
+<!-- load the d3.js library -->
+<script src="http://d3js.org/d3.v3.min.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+
+<script>
+var data = {{ data.chart_data | safe }}
+var h = '{{data.d}}'
+console.log(h)
+// Set the dimensions of the canvas / graph
+var margin = {top: 30, right: 20, bottom: 30, left: 50},
+    width = 600 - margin.left - margin.right,
+    height = 370 - margin.top - margin.bottom;
+
+// Set the ranges
+var x = d3.scale.linear().range([0, width]);
+var y = d3.scale.linear().range([height, 0]);
+
+// Define the axes
+var xAxis = d3.svg.axis().scale(x)
+    .orient("bottom");
+
+var yAxis = d3.svg.axis().scale(y)
+    .orient("left");
+
+// Define the line
+var valueline = d3.svg.line()
+    .x(function(d) { return x(d.k); })
+    .y(function(d) { return y(d.i); });
+
+// Adds the svg canvas
+var board = d3.select("body")
+    .append("svg")
+        .attr("width", width + margin.left + margin.right)
+        .attr("height", height + margin.top + margin.bottom + 50)
+// Get the data
+
+function drawplot(data){
+  var colorValue = d3.scale.category10();
+
+  svg = board.append("g")
+        .attr("transform",
+              "translate(" + margin.left + "," + margin.right + ")");
+  console.log(data)
+  x.domain(d3.extent(data, function(d) { return d.k; }));
+  y.domain(d3.extent(data, function(d) { return d.i; }));
+
+  // Add the X Axis
+  svg.append("g")
+      .attr("class", "x axis")
+      .attr("transform", "translate(0," + height + ")")
+      .call(xAxis)
+      .append("text")
+      .attr("y", 40)
+      .attr("x", width/2)
+      .attr("dx","4.1em")
+      .attr("text-anchor", "end")
+      .attr("stroke", "#ff6600")
+      .attr("font-size","13px")
+      .text("Var 1");
+
+  // Add the Y Axis
+  svg.append("g")
+      .attr("class", "y axis")
+      .call(yAxis)
+      .append("text")
+      .attr("transform", "rotate(-90)")
+      .attr("x",(-height/2)+15)
+      .attr("y", 10)
+      .attr("dy", "-3.4em")
+      .attr("text-anchor", "end")
+      .attr("stroke", "#ff6600")
+      .attr("font-size","13px")
+      .text("Var 2");
+
+  svg.selectAll(".mark").data(data)
+     .enter().append("circle")
+     .attr("class", "mark")
+     .attr("cx", function(d) { return x(d.k) })
+     .attr("cy", function(d) { return y(d.i) })
+     .attr("r", 5)
+
+}
+
+drawplot(data)
+
+function updateData() {
+      console.log("Hi upda")
+      $.post("", {'data': 'euc'}, function(data_infunc){
+      data2 = JSON.parse(data_infunc.chart_data)
+      console.log(data2)
+      d3.selectAll('g').remove();
+      drawplot(data2)
+      })
+}
+function loadBack() {
+
+      $.post("", {'data': 'cor'}, function(data_infunc){
+      data2 = JSON.parse(data_infunc.chart_data)
+      d3.selectAll('g').remove();
+      drawplot(data2)
+      })
+}
+
+$(document).ready(function(){
+  $(document).ajaxStart(function(){
+    $("#wait").css("display", "block");
+  });
+  $(document).ajaxComplete(function(){
+    $("#wait").css("display", "none");
+  });
+});
+</script>
+</body>
+</html>

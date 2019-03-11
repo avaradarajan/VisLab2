@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<style> /* set the CSS */
+body { font: 12px Arial;}
+
+path {
+    stroke: steelblue;
+    stroke-width: 2;
+    fill: none;
+}
+
+.axis path,
+.axis line {
+    fill: none;
+    stroke: grey;
+    stroke-width: 1;
+    shape-rendering: crispEdges;
+}
+</style>
+<body>
+<!-- load the d3.js library -->
+<script src="http://d3js.org/d3.v3.min.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+
+<script>
+var data = {{ data.chart_data | safe }}
+var c1 = {};
+var c2 = {};
+var c3 = {};
+var c1name,c2name,c3name;
+data.forEach(function(value,index) {
+    if (c1[Object.keys(value)[0]] === undefined){
+        c1[Object.keys(value)[0]] = [];
+        c1name = Object.keys(value)[0]}
+    else
+        c1[Object.keys(value)[0]].push(value[Object.keys(value)[0]])
+    if (c2[Object.keys(value)[1]] === undefined){
+        c2[Object.keys(value)[1]] = [];
+        c2name = Object.keys(value)[1]}
+    else
+        c2[Object.keys(value)[1]].push(value[Object.keys(value)[1]])
+    if (c3[Object.keys(value)[2]] === undefined){
+        c3[Object.keys(value)[2]] = [];
+        c3name = Object.keys(value)[2]}
+    else
+        c3[Object.keys(value)[2]].push(value[Object.keys(value)[2]])
+
+});
+// Set the dimensions of the canvas / graph
+var width = 900
+var height = 600
+var boxWidth = 300
+var boxHeight = 200
+// Set the ranges
+var x = d3.scale.linear().range([0, boxWidth]);
+var y = d3.scale.linear().range([boxHeight, 0]);
+
+// Define the axes
+var xAxis = d3.svg.axis().scale(x)
+    .orient("bottom");
+
+var yAxis = d3.svg.axis().scale(y)
+    .orient("left");
+
+// Adds the svg canvas
+var board = d3.select("body")
+    .append("svg")
+        .attr("width", width)
+        .attr("height", height)
+// Get the data
+
+function drawplot(c1,c2,c3){
+  console.log(c2)
+  svg = board.append("g")
+        .attr("width", boxWidth)
+        .attr("height", boxHeight)
+
+  console.log(data)
+  x.domain(d3.extent(data, function(d) { return d.k; }));
+  y.domain(d3.extent(data, function(d) { return d.i; }));
+
+  // Add the X Axis
+  svg.append("g")
+      .attr("class", "x axis")
+      .attr("transform", "translate(0," + boxHeight + ")")
+      .call(xAxis)
+      .append("text")
+      .attr("y", 40)
+      .attr("x", boxWidth/2)
+      .attr("dx","4.1em")
+      .attr("text-anchor", "end")
+      .attr("stroke", "#ff6600")
+      .attr("font-size","13px")
+      .text("Var 1");
+
+  // Add the Y Axis
+  svg.append("g")
+      .attr("class", "y axis")
+      .call(yAxis)
+      .append("text")
+      .attr("transform", "rotate(-90)")
+      .attr("x",(-boxHeight/2)+15)
+      .attr("y", 10)
+      .attr("dy", "-3.4em")
+      .attr("text-anchor", "end")
+      .attr("stroke", "#ff6600")
+      .attr("font-size","13px")
+      .text("Var 2");
+svg.append("g")
+      .attr("class", "x axis")
+      .attr("transform", "translate(300," + boxHeight + ")")
+      .call(xAxis)
+      .append("text")
+      .attr("y", 40)
+      .attr("x", boxWidth/2)
+      .attr("dx","4.1em")
+      .attr("text-anchor", "end")
+      .attr("stroke", "#ff6600")
+      .attr("font-size","13px")
+      .text("Var 1");
+
+  // Add the Y Axis
+  svg.append("g")
+      .attr("class", "y axis")
+      .call(yAxis)
+      .append("text")
+      .attr("transform", "rotate(-90)")
+      .attr("x",(-boxHeight/2)+15)
+      .attr("y", 10)
+      .attr("dy", "-3.4em")
+      .attr("text-anchor", "end")
+      .attr("stroke", "#ff6600")
+      .attr("font-size","13px")
+      .text("Var 2");
+
+  svg.selectAll(".mark").data(data)
+     .enter().append("circle")
+     .attr("class", "mark")
+     .attr("cx", function(d) { return x(d.k) })
+     .attr("cy", function(d) { return y(d.i) })
+     .attr("r", 5)
+
+}
+
+drawplot(c1,c2,c3)
+
+</script>
+</body>
+</html>

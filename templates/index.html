@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<style> /* set the CSS */
+body { font: 12px Arial;
+background-image: url({{ url_for('static', filename='white-waves.png') }});
+}
+
+path {
+    stroke: steelblue;
+    stroke-width: 2;
+    fill: none;
+}
+.heading {
+    text-align:center;
+}
+.buttons {
+    background-color: #555555;
+    color:white;
+    border:none
+    padding: 18px 22px;
+    font-size: 18px;
+}
+.tick{
+    stroke-opacity: 0.4;
+}
+.center {
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+  width: 70%;
+}
+#option {
+    text-align:center;
+}
+#wait {
+    text-align:center;
+}
+.axis path,
+.axis line {
+    fill: none;
+    stroke: grey;
+    stroke-width: 1;
+    shape-rendering: crispEdges;
+}
+.series-marker {
+    height: 1em;
+    width: 1em;
+    border-radius: 35%;
+    background-color: crimson;
+    display: inline-block;
+}
+</style>
+<body>
+<h1 class="heading">Mini Project 2 - Basic Tasks of Visual Analytics</h1>
+<div id="wait" style="display:none;width:69px;height:89px;position:absolute;top:50%;left:40%;padding:2px;text-align:center;"><img src="{{ url_for('static', filename='ajax-loader.gif') }}" width="64" height="64" /><br>Loading..</div>
+<div id="option">
+    <input name="updateButton" class="buttons" type="button" value="Elbow Plot" onclick="updateData()" />
+    <!--<input name="updateButton" class="buttons" type="button" value="PCA - Scree Plot" onclick="pcaScree()" />-->
+    <input name="updateButton" class="buttons" type="button" value="PCA - Scree Plot" onclick="pcaScreeT()" />
+    <input name="updateButton" class="buttons" type="button" value="PCA - Scatter Plot" onclick="loadPlot()" />
+    <input name="updateButton" class="buttons" type="button" value="MDS - Scatter Plot - Euclidean" onclick="euc()" />
+    <input name="updateButton" class="buttons" type="button" value="MDS - Scatter Plot - Correlation" onclick="cor()" />
+    <input name="updateButton" class="buttons" type="button" value="Scatter Plot Matrix" onclick="loadSPM()" />
+</div>
+<!-- load the d3.js library -->
+<script src="http://d3js.org/d3.v3.min.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+
+<script>
+$(document).ready(function(){
+  $(document).ajaxStart(function(){
+    $(".main").css("opacity", "0");
+    $("#wait").css("display", "block");
+  });
+  $(document).ajaxComplete(function(){
+    $("#wait").css("display", "none");
+    $(".main").css("opacity", "5");
+  });
+});
+
+var data = {{ data.plot_data | safe }}
+var num = {{ data.nump | safe }}
+console.log(num);
+if(num.np>2)
+{
+    var rdata = {{ data.rdata | safe }}
+    var sdata = {{ data.sdata | safe }}
+    console.log(rdata);
+    console.log(sdata);
+}
+var col = {{ data.columns | safe }}
+// Set the dimensions of the canvas / graph
+var margin = 200
+var width = 960 - margin
+var height = 600 - margin
+
+// Set the ranges
+var x = d3.scale.linear().range([0, width]);
+var y = d3.scale.linear().range([height, 0]);
+
+// Define the axes
+var xAxis = d3.svg.axis().scale(x)
+    .orient("bottom").tickSize(-height);
+
+var yAxis = d3.svg.axis().scale(y)
+    .orient("left").tickSize(-width);
+
+// Define the line
+var valueline = d3.svg.line()
+    .x(function(d) { return x(d.xval); })
+    .y(function(d) { return y(d.yval); });
+
+// Adds the svg canvas
+var board = d3.select("body")
+    .append("svg")
+        .attr("width", width + margin)
+        .attr("height", height + margin)
+        .attr("transform",
+              "translate(" + 200 + "," + 50 + ")")
+        .attr("class", "main")
+        .style("opacity", "5")
+// Get the data
+
+function drawdata(data){
+
+  console.log(data)
+  svg = board.append("g")
+             .attr("transform","translate(" + 90 + "," + 30 + ")");
+
+  x.domain(d3.extent(data, function(d) { return d.xval; }));
+  y.domain(d3.extent(data, function(d) { return d.yval; }));
+
+  // Add the valueline path.
+  svg.append("path")
+      .attr("class", "line")
+      .attr("d", valueline(data));
+
+  // Add the X Axis
+  svg.append("g")
+      .attr("class", "x axis")
+      .attr("transform", "translate(0," + height + ")")
+      .call(xAxis)
+      .append("text")
+      .attr("y", 40)
+      .attr("x", width/2)
+      .attr("dx","4.1em")
+      .attr("text-anchor", "end")
+      .attr("stroke", "#ff6600")
+      .attr("font-size","13px")
+      .text(col.xc);
+
+
+  // Add the Y Axis
+  svg.append("g")
+      .attr("class", "y axis")
+      .call(yAxis)
+      .append("text")
+      .attr("transform", "rotate(-90)")
+      .attr("x",(-height/2)+15)
+      .attr("y", 10)
+      .attr("dy", "-5.4em")
+      .attr("text-anchor", "end")
+      .attr("stroke", "#ff6600")
+      .attr("font-size","13px")
+      .text(col.yc);
+
+  svg.selectAll(".mark").data(data)
+     .enter().append("circle")
+     .attr("class", "mark")
+     .attr("cx", function(d) { return x(d.xval) })
+     .attr("cy", function(d) { return y(d.yval) })
+     .attr("r", 5)
+}
+function drawcutoff(data){
+   svg.append("line")
+     .attr("class", "cutoff")
+     .attr("x1", function(d) { return 0})
+     .attr("x2", function(d) { return 760})
+     .attr("y1", function(d) { return  y((data[3].yval+data[4].yval)/2)})
+     .attr("y2", function(d) { return  y((data[3].yval+data[4].yval)/2)})
+     .style("stroke","red")
+
+}
+//Default call on load
+drawdata(data)
+
+function pcaScree() {
+
+      $.post("", {'data': 'pcascree'}, function(data_infunc){
+      pcadata = JSON.parse(data_infunc.chart_data)
+      d3.selectAll('g').remove();
+      console.log(pcadata)
+      drawdata(pcadata)
+      drawcutoff(pcadata)
+      })
+}
+//orig,rand,strat
+function drawmdata(data,data2,data3,cols){
+
+  var colorValue = d3.scale.category10();
+
+  if(true){
+  svg = board.append("g")
+             .attr("transform","translate(" + 90 + "," + 30 + ")");}
+
+  x.domain(d3.extent(data, function(d) { return d.xval; }));
+  min = (d3.min(d3.extent(data3, function(d) { return d.yval; })))
+  max = (d3.max(d3.extent(data, function(d) { return d.yval; })))
+  y.domain([min,max]);
+
+  line1 = svg.append("line").attr("x1", 600).attr("y1", 25).attr("x2", 620).attr("y2", 25).style("stroke", function(d) {
+                return "#ff4000"; }).style("stroke-width",4)
+  svg.append("text").attr("x", 620).attr("y", 25).text(" Original Data")
+
+  svg.append("line").attr("x1", 600).attr("y1", 45).attr("x2", 620).attr("y2", 45).style("stroke", function(d) {
+                return "#0040ff"; }).style("stroke-width",4)
+  svg.append("text").attr("x", 620).attr("y", 45).text(" Random Sampled Data")
+
+  svg.append("line").attr("x1", 600).attr("y1", 65).attr("x2", 620).attr("y2", 65).style("stroke", function(d) {
+                return "#000000"; }).style("stroke-width",4)
+   svg.append("text").attr("x", 620).attr("y", 65).text(" Stratified Sampled Data")
+
+
+  // Add the valueline path.
+  svg.append("path")
+      .attr("class", "line")
+      .attr("d", valueline(data));
+
+    // Add the valueline path.
+  svg.append("path")
+      .attr("class", "line")
+      .attr("d", valueline(data))
+      .style("stroke", function(d) {
+                return "#ff4000"; })
+
+  svg.append("path")
+      .attr("class", "line")
+      .attr("d", valueline(data2))
+      .style("stroke", function(d) {
+                return "#0040ff"; })
+
+  svg.append("path")
+      .attr("class", "line")
+      .attr("d", valueline(data3))
+      .style("stroke", function(d) {
+                return "#000000"; })
+
+
+  // Add the X Axis
+  svg.append("g")
+      .attr("class", "x axis")
+      .attr("transform", "translate(0," + height + ")")
+      .call(xAxis)
+      .append("text")
+      .attr("y", 40)
+      .attr("x", width/2)
+      .attr("dx","4.1em")
+      .attr("text-anchor", "end")
+      .attr("stroke", "#ff6600")
+      .attr("font-size","13px")
+      .text(cols.xc);
+
+
+  // Add the Y Axis
+  svg.append("g")
+      .attr("class", "y axis")
+      .call(yAxis)
+      .append("text")
+      .attr("transform", "rotate(-90)")
+      .attr("x",(-height/2)+15)
+      .attr("y", 10)
+      .attr("dy", "-5.4em")
+      .attr("text-anchor", "end")
+      .attr("stroke", "#ff6600")
+      .attr("font-size","13px")
+      .text(cols.yc);
+
+  svg.selectAll(".mark").data(data)
+     .enter().append("circle")
+     .attr("class", "mark")
+     .attr("cx", function(d) { return x(d.xval) })
+     .attr("cy", function(d) { return y(d.yval) })
+     .attr("r", 3)
+
+  svg.selectAll(".mark2").data(data2)
+     .enter().append("circle")
+     .attr("class", "mark2")
+     .attr("cx", function(d) { return x(d.xval) })
+     .attr("cy", function(d) { return y(d.yval) })
+     .attr("r", 3)
+
+  svg.selectAll(".mark3").data(data3)
+     .enter().append("circle")
+     .attr("class", "mark3")
+     .attr("cx", function(d) { return x(d.xval) })
+     .attr("cy", function(d) { return y(d.yval) })
+     .attr("r", 3)
+}
+
+function pcaScreeT() {
+
+      $.post("", {'data': 'pcascree'}, function(data_infunc){
+      pcaodata = JSON.parse(data_infunc.plot_data)
+      pcardata = JSON.parse(data_infunc.rdata)
+      pcasdata = JSON.parse(data_infunc.sdata)
+      cols = JSON.parse(data_infunc.columns)
+      d3.selectAll('g').remove();
+      console.log(pcaodata)
+      console.log(pcardata)
+      console.log(pcasdata)
+      drawmdata(pcaodata,pcardata,pcasdata,cols)
+      drawcutoff(pcasdata)
+      })
+}
+function drawplot(data,col){
+  var colorValue = d3.scale.category10();
+
+  svg = board.append("g")
+             .attr("transform","translate(" + 90 + "," + 30 + ")");
+
+  console.log(data)
+  x.domain(d3.extent(data, function(d) { return d.xval; }));
+  y.domain(d3.extent(data, function(d) { return d.yval; }));
+
+  // Add the X Axis
+  svg.append("g")
+      .attr("class", "x axis")
+      .attr("transform", "translate(0," + height + ")")
+      .call(xAxis)
+      .append("text")
+      .attr("y", 40)
+      .attr("x", width/2)
+      .attr("dx","4.1em")
+      .attr("text-anchor", "end")
+      .attr("stroke", "#ff6600")
+      .attr("font-size","13px")
+      .text(col.xc);
+
+  // Add the Y Axis
+  svg.append("g")
+      .attr("class", "y axis")
+      .call(yAxis)
+      .append("text")
+      .attr("transform", "rotate(-90)")
+      .attr("x",(-height/2)+15)
+      .attr("y", 10)
+      .attr("dy", "-3.4em")
+      .attr("text-anchor", "end")
+      .attr("stroke", "#ff6600")
+      .attr("font-size","13px")
+      .text(col.yc);
+
+  svg.selectAll(".mark").data(data)
+     .enter().append("circle")
+     .attr("class", "mark")
+     .attr("cx", function(d) { return x(d.xval) })
+     .attr("cy", function(d) { return y(d.yval) })
+     .attr("r", 5)
+     .style("fill", function(d,i){
+          console.log(colorValue(d.c))
+          return colorValue(d.c)});
+
+}
+function loadPlot() {
+
+      $.post("", {'data': 'pcascatter'}, function(data_infunc){
+      data2 = JSON.parse(data_infunc.plot_data)
+      cols = JSON.parse(data_infunc.columns)
+      d3.selectAll('g').remove();
+      drawplot(data2,cols)
+      })
+}
+function euc() {
+
+      $.post("", {'data': 'mdsscattereuc'}, function(data_infunc){
+      data2 = JSON.parse(data_infunc.plot_data)
+      cols = JSON.parse(data_infunc.columns)
+      console.log(data2)
+      d3.selectAll('g').remove();
+      drawplot(data2,cols)
+      })
+}
+function cor() {
+
+      $.post("", {'data': 'mdsscattercor'}, function(data_infunc){
+      data2 = JSON.parse(data_infunc.plot_data)
+      cols = JSON.parse(data_infunc.columns)
+      d3.selectAll('g').remove();
+      drawplot(data2,cols)
+      })
+}
+function loadImg(path){
+  var colorValue = d3.scale.category10();
+
+  d3.select("body").append("img")
+             .attr("src",path)
+             .attr("width",640)
+             .attr("height",640)
+             .attr("class","center")
+             .style("overflow","scroll")
+}
+function loadSPM() {
+
+      $.post("", {'data': 'spm'}, function(data_infunc){
+      data2 = JSON.parse(data_infunc.path)
+      d3.selectAll('svg').remove();
+      loadImg(data2.path)
+      })
+}
+</script>
+</body>
+</html>
